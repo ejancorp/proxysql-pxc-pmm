@@ -1,0 +1,64 @@
+version: '3.1'
+
+networks:
+    percona_network:
+        driver: bridge
+
+services:
+
+    pmm-server:
+        image: percona/pmm-server:latest
+        ports:
+            - "8080:80"
+        networks:
+            - percona_network
+
+    bootstrap-cluster:
+        build:
+            context: ./
+            dockerfile: ./bootstrap/Dockerfile
+        environment:
+            PMM_SERVER: pmm-server
+        networks:
+            - percona_network
+        depends_on:
+            - pmm-server
+
+    first-node-cluster:
+        build:
+            context: ./
+            dockerfile: ./first-node/Dockerfile
+        environment:
+            PMM_SERVER: pmm-server
+        networks:
+            - percona_network
+        depends_on:
+            - pmm-server
+            - bootstrap-cluster
+
+    second-node-cluster:
+        build:
+            context: ./
+            dockerfile: ./second-node/Dockerfile
+        environment:
+            PMM_SERVER: pmm-server
+        networks:
+            - percona_network
+        depends_on:
+            - pmm-server
+            - bootstrap-cluster
+
+    proxysql:
+        build:
+            context: ./
+            dockerfile: ./proxysql/Dockerfile
+        environment:
+            PMM_SERVER: pmm-server
+        ports:
+            - "6032:6032"
+            - "6033:6033"
+        networks:
+            - percona_network
+        depends_on:
+            - pmm-server
+            - bootstrap-cluster
